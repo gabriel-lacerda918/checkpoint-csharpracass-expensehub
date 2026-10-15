@@ -1,5 +1,7 @@
 # Checkpoint 2 — ExpenseHub
 
+# GABRIEL MACHADO LACERDA   RM: 556714   3ESPW
+
 Checkpoint de C# em grupos de até 3 pessoas para construção de uma Application Programming Interface (API) corporativa de reembolsos.
 
 O prazo de entrega é **13 de outubro de 2026**. O grupo deverá implementar autenticação, autorização, fluxo de aprovação e reprovação, pagamento simulado, histórico e testes unitários.
