@@ -18,5 +18,10 @@ internal static class Roles
     /// </summary>
     public const string ExpenseReaders = Employee + "," + Approver + "," + Finance + "," + Auditor;
 
+    /// <summary>
+    /// Roles allowed to use the report endpoints; the scope each one may request is decided by the service.
+    /// </summary>
+    public const string ReportUsers = Employee + "," + Auditor;
+
     public static IReadOnlyList<string> All { get; } = new[] { Admin, Employee, Approver, Finance, Auditor };
 }

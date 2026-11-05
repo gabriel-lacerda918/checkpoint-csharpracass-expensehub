@@ -1,9 +1,175 @@
-@ExpenseHub_Api_HostAddress = http://localhost:5245
+@host = http://localhost:5245
 
-GET {{ExpenseHub_Api_HostAddress}}/health
-Accept: application/json
+### Health
+GET {{host}}/health
+
+### Registrar usuario (nao aceita roles)
+POST {{host}}/register
+Content-Type: application/json
+
+{
+  "email": "ana@expensehub.local",
+  "password": "Troque-Esta-Senha-1"
+}
+
+### Login (copie o accessToken retornado para a variavel abaixo)
+POST {{host}}/login
+Content-Type: application/json
+
+{
+  "email": "ana@expensehub.local",
+  "password": "Troque-Esta-Senha-1"
+}
+
+@accessToken = cole-o-token-aqui
+@expenseId = cole-o-id-aqui
+@userId = cole-o-id-do-usuario-aqui
+
+### Admin: listar usuarios
+GET {{host}}/api/admin/users
+Authorization: Bearer {{accessToken}}
+
+### Admin: definir roles (o usuario precisa autenticar novamente)
+PUT {{host}}/api/admin/users/{{userId}}/roles
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee"]
+}
+
+### Employee: criar rascunho
+POST {{host}}/api/expenses
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "description": "Taxi ate o aeroporto para reuniao",
+  "amount": 120.50,
+  "expenseDate": "2026-10-10",
+  "categoryId": 4
+}
+
+### Employee: editar rascunho
+PUT {{host}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "description": "Taxi ate o aeroporto para reuniao",
+  "amount": 99.90,
+  "expenseDate": "2026-10-10"
+}
+
+### Listar / detalhar / historico
+GET {{host}}/api/expenses
+Authorization: Bearer {{accessToken}}
 
 ###
+GET {{host}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{accessToken}}
 
-# Os endpoints do checkpoint estão definidos em docs/REQUISITOS.md.
-# Implemente e adicione aqui as requisições usadas para validar cada issue.
+###
+GET {{host}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{accessToken}}
+
+### Employee: enviar
+POST {{host}}/api/expenses/{{expenseId}}/submit
+Authorization: Bearer {{accessToken}}
+
+### Approver: aprovar
+POST {{host}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{accessToken}}
+
+### Approver: reprovar (justificativa de 10 a 500 caracteres)
+POST {{host}}/api/expenses/{{expenseId}}/reject
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Comprovante ausente e valor acima do esperado"
+}
+
+### Finance: pagar
+POST {{host}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{accessToken}}
+
+### ---------------------------------------------------------------------------
+### CP3 - Relatorios em segundo plano (use um token diferente por perfil)
+### ---------------------------------------------------------------------------
+
+@employeeToken = cole-o-token-do-employee-aqui
+@employee2Token = cole-o-token-do-segundo-employee-aqui
+@auditorToken = cole-o-token-do-auditor-aqui
+@reportId = cole-o-id-do-relatorio-aqui
+
+### Employee: solicitar relatorio Mine (202 + Location)
+POST {{host}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Mine"
+}
+
+### Auditor: solicitar relatorio Global (202 + Location)
+POST {{host}}/api/reports
+Authorization: Bearer {{auditorToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Global"
+}
+
+### Employee: Global negado (403)
+POST {{host}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-01",
+  "toDate": "2026-09-30",
+  "scope": "Global"
+}
+
+### Periodo invertido (400, nada e criado nem publicado)
+POST {{host}}/api/reports
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "fromDate": "2026-09-30",
+  "toDate": "2026-09-01",
+  "scope": "Mine"
+}
+
+### Sem autenticacao (401)
+GET {{host}}/api/reports
+
+### Listar somente as solicitacoes do proprio usuario
+GET {{host}}/api/reports
+Authorization: Bearer {{employeeToken}}
+
+### Acompanhar (repita ate status Completed)
+GET {{host}}/api/reports/{{reportId}}
+Authorization: Bearer {{employeeToken}}
+
+### Baixar o Excel do resultado salvo (200 .xlsx; 409 se ainda nao concluido)
+GET {{host}}/api/reports/{{reportId}}/excel
+Authorization: Bearer {{employeeToken}}
+
+### Outro Employee consultando relatorio alheio (404)
+GET {{host}}/api/reports/{{reportId}}
+Authorization: Bearer {{employee2Token}}
+
+### Auditor consultando relatorio criado por outro usuario (404)
+GET {{host}}/api/reports/{{reportId}}
+Authorization: Bearer {{auditorToken}}
+
+### Auditor baixando Excel de relatorio criado por outro usuario (404)
+GET {{host}}/api/reports/{{reportId}}/excel
+Authorization: Bearer {{auditorToken}}

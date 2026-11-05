@@ -1,0 +1,64 @@
+# ExpenseHub: web + worker + RabbitMQ, usando as imagens publicadas (nunca build local).
+# Copie .env.example para .env, preencha os valores e execute: docker compose pull && docker compose up -d
+name: expensehub
+
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    # O nome do nó do RabbitMQ deriva do hostname; mantê-lo fixo preserva os dados do volume entre recriações.
+    hostname: expensehub-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?defina RABBITMQ_USER no .env}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  web:
+    image: "${WEB_IMAGE:?defina WEB_IMAGE no .env}"
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5245:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__ExpenseHub: "Data Source=/data/expensehub.db"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?defina JWT_SIGNING_KEY no .env}"
+      Seed__AdminEmail: "${SEED_ADMIN_EMAIL:-admin@expensehub.local}"
+      Seed__AdminPassword: "${SEED_ADMIN_PASSWORD:?defina SEED_ADMIN_PASSWORD no .env}"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__UserName: "${RABBITMQ_USER:?defina RABBITMQ_USER no .env}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?defina RABBITMQ_PASSWORD no .env}"
+    volumes:
+      - expensehub-data:/data
+
+  worker:
+    image: "${WORKER_IMAGE:?defina WORKER_IMAGE no .env}"
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      web:
+        condition: service_started
+    environment:
+      ConnectionStrings__ExpenseHub: "Data Source=/data/expensehub.db"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__UserName: "${RABBITMQ_USER:?defina RABBITMQ_USER no .env}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?defina RABBITMQ_PASSWORD no .env}"
+    volumes:
+      - expensehub-data:/data
+
+volumes:
+  rabbitmq-data:
+  expensehub-data:
