@@ -1,0 +1,19 @@
+# Imagem da aplicação web (ExpenseHub.Api). Contexto de build: raiz do repositório.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY Directory.Build.props .editorconfig ./
+COPY sources ./sources
+RUN dotnet publish sources/ExpenseHub.Api/ExpenseHub.Api.csproj --configuration Release --output /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+ARG APP_VERSION=local
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.title="expensehub-web" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${APP_VERSION}"
+# A versão em execução aparece em /health e nos logs de inicialização.
+ENV APP_VERSION=${APP_VERSION}
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "ExpenseHub.Api.dll"]

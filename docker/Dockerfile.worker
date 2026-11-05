@@ -1,0 +1,18 @@
+# Imagem do worker de relatórios (ExpenseHub.Worker). Contexto de build: raiz do repositório.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY Directory.Build.props .editorconfig ./
+COPY sources ./sources
+RUN dotnet publish sources/ExpenseHub.Worker/ExpenseHub.Worker.csproj --configuration Release --output /app/publish
+
+# O worker reutiliza o código da API, que depende do framework ASP.NET Core; por isso a imagem base é a aspnet.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+ARG APP_VERSION=local
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.title="expensehub-worker" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${APP_VERSION}"
+ENV APP_VERSION=${APP_VERSION}
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "ExpenseHub.Worker.dll"]
